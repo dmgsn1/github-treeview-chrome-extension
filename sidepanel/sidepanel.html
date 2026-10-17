@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitHub Tree</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="bar">
+    <span class="brand">GitHub Tree</span>
+    <span class="status" id="status"></span>
+    <button class="icon" id="refresh" title="Refresh from GitHub" aria-label="Refresh">↻</button>
+    <button class="icon" id="toggle-settings" title="Settings" aria-label="Settings" aria-expanded="false">⚙</button>
+  </header>
+
+  <div class="main-window" id="main-window" hidden></div>
+  <div class="errors worker" id="worker" role="alert" hidden></div>
+  <div class="errors" id="errors" hidden></div>
+
+  <form class="settings" id="settings" hidden>
+    <label>GitHub token
+      <input type="password" name="token" autocomplete="off" spellcheck="false" placeholder="github_pat_… or ghp_…">
+    </label>
+    <details class="help" id="token-help">
+      <summary>How to create a token</summary>
+      <p><strong>Fine-grained token</strong>: read-only, but it covers one owner (your account <em>or</em> one organisation).</p>
+      <ol>
+        <li>github.com → your avatar → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> →
+          <b>Fine-grained tokens</b> → <b>Generate new token</b>
+          (<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">open</a>).</li>
+        <li><b>Resource owner</b>: the organisation whose repositories you work in.</li>
+        <li><b>Repository access</b>: All repositories.</li>
+        <li><b>Permissions</b> → <b>Repository permissions</b>: <b>Actions</b>, <b>Commit statuses</b>, <b>Contents</b>
+          and <b>Issues</b> → Read-only (statuses, contents and Actions are what the PR check states and the Lift holds
+          safety check read); <b>Pull requests</b> → Read and write if you want <b>Lift holds</b> (it removes the
+          <code>hold:operator</code> label), otherwise Read-only. <b>Metadata</b> is added automatically. There is no
+          Checks permission for these tokens; the panel works without it.</li>
+        <li><b>Generate token</b>, copy it, paste it above and press Save.</li>
+      </ol>
+      <p class="hint">If the organisation requires approval for fine-grained tokens, the token sees nothing there until an
+        organisation owner approves it (organisation → Settings → Personal access tokens → Pending requests).</p>
+      <p><strong>Classic token</strong>: covers every owner at once; its <code>repo</code> scope allows writes everywhere.
+        The only write this extension makes is removing <code>hold:operator</code> when you lift holds.</p>
+      <ol>
+        <li>Same path, then <b>Tokens (classic)</b> → <b>Generate new token (classic)</b>
+          (<a href="https://github.com/settings/tokens/new?scopes=repo,read:org&amp;description=GitHub%20Tree" target="_blank" rel="noopener">open with the scopes ticked</a>).</li>
+        <li>Scopes: <b>repo</b> and <b>read:org</b>.</li>
+        <li>For an organisation with SAML single sign-on: next to the new token, <b>Configure SSO</b> → <b>Authorize</b>.</li>
+      </ol>
+    </details>
+    <label>Owners to scan for the two lists
+      <input type="text" name="owners" spellcheck="false" placeholder="blank: everything the token can read">
+    </label>
+    <p class="hint">Leave blank to cover every owner the token can read: your account, your organisations, and anything
+      already in the tree. Enterprise Cloud organisations count as ordinary organisations. GitHub Enterprise Server (a
+      company's own GitHub host) is not supported.</p>
+    <p class="scope" id="scope" hidden></p>
+    <label class="check"><input type="checkbox" name="gather"> Move new GitHub tabs into the main window</label>
+    <label class="check"><input type="checkbox" name="dedupe"> Switch to an already-open tab instead of opening a duplicate</label>
+    <label class="check"><input type="checkbox" name="group"> Group new GitHub tabs by repository</label>
+    <label class="check"><input type="checkbox" name="showOwner"> Show the owner in repository names (<code>owner/name</code>)</label>
+    <div class="row"><button type="submit" id="save">Save</button></div>
+    <p class="check-result" id="check-result" role="status" hidden></p>
+    <p class="hint">Updating: replace the files in the folder Chrome loads this extension from (chrome://extensions →
+      GitHub Tree → Details → Source), then press ↻ on its card. Unzipping into a new folder leaves Chrome on the old
+      build. <span id="build"></span>.</p>
+  </form>
+
+  <section id="held-section">
+    <div class="section-head">
+      <h2><button class="node" data-collapse="held"><span class="chev"></span>Held for you <span class="count" id="held-count"></span></button></h2>
+      <button class="head-action" id="lift-open" hidden>Lift holds…</button>
+    </div>
+    <form class="lift" id="lift" hidden></form>
+    <ul class="list" id="held"></ul>
+  </section>
+  <section id="blocked-section">
+    <h2><button class="node" data-collapse="blocked"><span class="chev"></span>Blocked on you <span class="count" id="blocked-count"></span></button></h2>
+    <ul class="list" id="blocked"></ul>
+  </section>
+  <section>
+    <h2 class="plain">Repositories</h2>
+    <ul class="tree" id="tree"></ul>
+    <p class="empty" id="tree-empty" hidden>Your repositories appear here once a token is saved. Drag a repository by its name to reorder (or Alt+↑/↓).</p>
+  </section>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
