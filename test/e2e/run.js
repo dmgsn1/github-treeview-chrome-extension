@@ -30,7 +30,8 @@ const server = createServer({ key: readFileSync(join(profile, "key.pem")), cert:
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 
 const context = await chromium.launchPersistentContext(join(profile, "chrome"), {
-  executablePath: process.env.CHROMIUM || undefined,
+  // Extensions need full Chromium; without channel, headless runs use the headless shell, which cannot load them.
+  ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : { channel: "chromium" }),
   headless: true,
   args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`, "--headless=new",
     `--host-resolver-rules=MAP github.com 127.0.0.1:${server.address().port}, MAP api.github.com 127.0.0.1:${server.address().port}`, "--no-proxy-server", "--ignore-certificate-errors"],
@@ -51,7 +52,8 @@ try {
   const driver = await context.newPage();
   await driver.goto(`chrome-extension://${extensionId}/sidepanel/sidepanel.html`);
   const inSw = (fn, arg) => driver.evaluate(fn, arg);
-  const until = async (what, fn, ms = 5000) => {
+  // Generous: CI runners are slower than a laptop, and it only waits as long as needed.
+  const until = async (what, fn, ms = 15000) => {
     const end = Date.now() + ms;
     for (;;) {
       const v = await fn();

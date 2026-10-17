@@ -32,7 +32,8 @@ assert.notEqual(old, readFileSync(bg, "utf8"), "fixture: the ping handler was no
 writeFileSync(bg, old);
 
 const context = await chromium.launchPersistentContext(join(work, "chrome"), {
-  executablePath: process.env.CHROMIUM || undefined,
+  // Extensions need full Chromium; without channel, headless runs use the headless shell, which cannot load them.
+  ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : { channel: "chromium" }),
   headless: true,
   args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, "--headless=new", "--no-proxy-server"],
   viewport: { width: 420, height: 900 },
